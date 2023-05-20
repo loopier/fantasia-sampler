@@ -13,10 +13,6 @@
 #define BUTTON_DOWN 1
 
 // Audio Declarations
-// AudioSynthWaveform       waveform1;      //xy=684,318
-// AudioOutputI2S           i2s1;           //xy=913,314
-// AudioConnection          patchCord1(waveform1, 0, i2s1, 0);
-// AudioConnection          patchCord2(waveform1, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=1125,313
 
 // GUItool: begin automatically generated code
@@ -90,66 +86,19 @@ bool encFlag = 0; // is display decimal flag displayed
 int encPressed = 0; // is encoder button pressed
 char displayValue = 0;
 
-int mywaveform = 0;
-
 void setup() {  
   // open the serial port at 9600 bps:
   Serial.begin(9600); 
-
   Serial.println("Booting Sampler");
   
-  //Audio setup
-  Serial.println("Setting up audio...");
-  AudioMemory(8);
-  sgtl5000_1.enable();
-  sgtl5000_1.volume(1);
-  sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
-  sgtl5000_1.micGain(36); //NEEDED?
-  
-  Serial.println("Audio ready");
+  audioSetup();
+  sdCardSetup();
 
-  // SD setup
-  Serial.println("Setting up SD card...");
-  SPI.setMOSI(SDCARD_MOSI_PIN);
-  SPI.setSCK(SDCARD_SCK_PIN);
-  if (!(SD.begin(SDCARD_CS_PIN))) {
-    while (numSdReadAttempts < maxSdReadAttempts) {
-      Serial.println("Unable to access the SD card");
-      numSdReadAttempts++;
-      delay(500);
-    }
-    Serial.println("ERROR: Failed to read SD card.");
-  } {
-    loadSoundFiles();
-    wavPlayer.play("SDTEST1.WAV");
-    Serial.println("Playing sound file...");
-  }
+  loadSoundFiles();
+  wavPlayer.play("SDTEST1.WAV");
+  Serial.println("Playing sound file...");
 
-  // reset for potential future attempts
-  numSdReadAttempts = 0;
-
-  // sets the digital pins as inputs and set pullups
-  Serial.println("Setting digital pins...");
-  pinMode(btnPin1, INPUT_PULLUP);   
-  pinMode(btnPin2, INPUT_PULLUP); 
-  pinMode(btnPin3, INPUT_PULLUP); 
-  pinMode(btnPin4, INPUT_PULLUP); 
-  pinMode(gatePin1, INPUT_PULLUP); 
-  pinMode(gatePin2, INPUT_PULLUP); 
-  pinMode(encBtnPin, INPUT_PULLUP); 
-  Serial.println("done");
-
-  // set Display LEDs ports as Outputs
-  Serial.println("Setting display...");
-  pinMode(30, OUTPUT);    
-  pinMode(32, OUTPUT); 
-  pinMode(33, OUTPUT); 
-  pinMode(28, OUTPUT); 
-  pinMode(31, OUTPUT); 
-  pinMode(26, OUTPUT); 
-  pinMode(29, OUTPUT); 
-  pinMode(9, OUTPUT);
-  Serial.println("done");
+  pinSetup();
 
   Serial.print("SOUND_BANK:"); Serial.println(soundBank);
 }
@@ -202,11 +151,63 @@ void loop() {
   }
 
   if (btn1 == BUTTON_DOWN) {
-    Serial.println("btn 1 DOWN");
+    // Serial.println("btn 1 DOWN");
+    loadSoundFiles();
   }
 
   // Serial.println(wavPlayer.positionMillis());
   // Serial.println(btn1);
+}
+
+void audioSetup() {
+  Serial.println("Setting up audio...");
+  AudioMemory(8);
+  sgtl5000_1.enable();
+  sgtl5000_1.volume(1);
+  sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
+  sgtl5000_1.micGain(36); //NEEDED?
+
+  Serial.println("Audio ready");
+}
+
+void sdCardSetup() {
+  Serial.println("Setting up SD card...");
+  SPI.setMOSI(SDCARD_MOSI_PIN);
+  SPI.setSCK(SDCARD_SCK_PIN);
+  if (!(SD.begin(SDCARD_CS_PIN))) {
+    while (numSdReadAttempts < maxSdReadAttempts) {
+      Serial.println("Unable to access the SD card");
+      numSdReadAttempts++;
+      delay(500);
+    }
+    Serial.println("ERROR: Failed to read SD card.");
+  }
+  numSdReadAttempts = 0;
+}
+
+void pinSetup() {
+  // sets the digital pins as inputs and set pullups
+  Serial.println("Setting digital pins...");
+  pinMode(btnPin1, INPUT_PULLUP);
+  pinMode(btnPin2, INPUT_PULLUP);
+  pinMode(btnPin3, INPUT_PULLUP);
+  pinMode(btnPin4, INPUT_PULLUP);
+  pinMode(gatePin1, INPUT_PULLUP);
+  pinMode(gatePin2, INPUT_PULLUP);
+  pinMode(encBtnPin, INPUT_PULLUP);
+  Serial.println("done");
+
+  // set Display LEDs ports as Outputs
+  Serial.println("Setting display...");
+  pinMode(30, OUTPUT);
+  pinMode(32, OUTPUT);
+  pinMode(33, OUTPUT);
+  pinMode(28, OUTPUT);
+  pinMode(31, OUTPUT);
+  pinMode(26, OUTPUT);
+  pinMode(29, OUTPUT);
+  pinMode(9, OUTPUT);
+  Serial.println("done");
 }
 
 void printDirectory(File dir, int numTabs) {
@@ -244,6 +245,7 @@ void loadSoundFiles() {
     while(true) {
       File entry = root.openNextFile();
       if(!entry) { break; }
+
       sounds[soundBank][soundIndex] = entry.name();
       Serial.print(entry.name());
       Serial.print(" : ");
