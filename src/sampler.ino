@@ -22,16 +22,13 @@ AudioConnection          patchCord1(wavPlayer, 0, i2s1, 0);
 AudioConnection          patchCord2(wavPlayer, 1, i2s1, 1);
 // GUItool: end automatically generated code
 
-
 //Display LEDs Declaration
 // SegmentDisplay segmentDisplay(30, 32, 33, 28, 31, 26, 29, 9);
 //                             E   D   C  DP  B   A   G   F
 //                             1   2   4  5   6   7   9  10
 SegmentDisplay segmentDisplay(31, 28, 33, 9, 32, 30, 26, 29);
 
-
 //Teensy audio initialization Code
-
 //SD CARD PINS
 #define SDCARD_CS_PIN    10
 #define SDCARD_MOSI_PIN  11
@@ -129,25 +126,27 @@ void loop() {
   
   if (newEncPos != oldEncPos) {
     int hex = abs(newEncPos) % 16;
-    if(newEncPos >= 0) {
-      displayValue = hex;
-    } else {
-      displayValue = 16 - hex;
+    if(newEncPos < 0) {
+      hex = 16 - hex;
     }
-    Serial.println(hex);
 
-    oldEncPos = newEncPos;
+    if( sounds[soundBank][hex].length() <= 0 ) return;
 
+    displayValue = hex;
     segmentDisplay.displayHex(displayValue, encFlag);
-    soundFile = hex;
-    soundFilename = sounds[soundBank][soundFile];
-    // changeSoundFile(soundFilename):
+
+    soundFilename = sounds[soundBank][hex];
+    changeSoundFile(soundFilename);
+
+    Serial.print(hex);
+    Serial.print(" - ");
     Serial.print(soundBank);
     Serial.print(":");
     Serial.print(soundFile);
-    Serial.print(" - ");
-    Serial.print(displayValue);
-    Serial.println(soundFilename);
+    // Serial.print(displayValue);
+    // Serial.print(soundFilename);
+    Serial.println("");
+    oldEncPos = newEncPos;
   }
 
   if (btn1 == BUTTON_DOWN) {
@@ -258,8 +257,10 @@ void loadSoundFiles() {
 }
 
 void changeSoundFile( String filename ) {
-  // wavPlayer.stop();
-  // String f = filename;
-  // wavPlayer.play(f);
-
+  Serial.print("change sound"); Serial.println(filename);
+  int length = filename.length() + 1;
+  char buf [length];
+  filename.toCharArray(buf, length);
+  wavPlayer.stop();
+  wavPlayer.play(buf);
 }
