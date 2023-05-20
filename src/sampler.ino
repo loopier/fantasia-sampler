@@ -123,31 +123,8 @@ void loop() {
     // wavPlayer.play(soundFilename);
     Serial.println(soundFilename);
   }
-  
-  if (newEncPos != oldEncPos) {
-    int hex = abs(newEncPos) % 16;
-    if(newEncPos < 0) {
-      hex = 16 - hex;
-    }
 
-    if( sounds[soundBank][hex].length() <= 0 ) return;
-
-    displayValue = hex;
-    segmentDisplay.displayHex(displayValue, encFlag);
-
-    soundFilename = sounds[soundBank][hex];
-    changeSoundFile(soundFilename);
-
-    Serial.print(hex);
-    Serial.print(" - ");
-    Serial.print(soundBank);
-    Serial.print(":");
-    Serial.print(soundFile);
-    // Serial.print(displayValue);
-    // Serial.print(soundFilename);
-    Serial.println("");
-    oldEncPos = newEncPos;
-  }
+  updateEncoder(newEncPos);
 
   if (btn1 == BUTTON_DOWN) {
     // Serial.println("btn 1 DOWN");
@@ -263,4 +240,39 @@ void changeSoundFile( String filename ) {
   filename.toCharArray(buf, length);
   wavPlayer.stop();
   wavPlayer.play(buf);
+}
+
+void updateEncoder(int pos) {
+  if (pos != oldEncPos) {
+    int hex = abs(pos) % 16;
+    if(pos < 0) {
+      hex = 16 - hex;
+    }
+
+    // safety measure to avoid reading empty slots
+    // if( sounds[soundBank][hex].length() <= 0 ) return;
+    // if(sounds[soundBank][hex].length() <=0 && pos > 0) updateEncoder(hex+1);
+    // if(sounds[soundBank][hex].length() <=0 && pos < 0) updateEncoder(hex-1);
+
+    displayValue = hex;
+    segmentDisplay.displayHex(displayValue, encFlag);
+
+
+    soundFilename = sounds[soundBank][hex];
+    changeSoundFile(soundFilename);
+
+    Serial.print(hex);
+    Serial.print(":");
+    Serial.print(sounds[soundBank][hex].length());
+    Serial.print(" - ");
+    Serial.print(soundBank);
+    Serial.print(":");
+    Serial.print(soundFile);
+    Serial.print(" - ");
+    Serial.print(displayValue);
+    // Serial.print(soundFilename);
+    Serial.println("");
+    newEncPos = pos;
+    oldEncPos = pos;
+  }
 }
