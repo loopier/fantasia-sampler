@@ -2,6 +2,7 @@
 #include <SegmentDisplay.h>
 
 #include <Audio.h>
+#include <TeensyVariablePlayback.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
@@ -16,7 +17,8 @@
 AudioControlSGTL5000     sgtl5000_1;     //xy=1125,313
 
 // GUItool: begin automatically generated code
-AudioPlaySdWav           wavPlayer;     //xy=217,501
+// AudioPlaySdWav           wavPlayer;     //xy=217,501
+AudioPlaySdResmp         wavPlayer;     //xy=217,501
 AudioOutputI2S           i2s1;           //xy=435,502
 AudioConnection          patchCord1(wavPlayer, 0, i2s1, 0);
 AudioConnection          patchCord2(wavPlayer, 1, i2s1, 1);
@@ -37,18 +39,18 @@ SegmentDisplay segmentDisplay(31, 28, 33, 9, 32, 30, 26, 29);
 int maxSdReadAttempts = 10;
 int numSdReadAttempts = 0;
 File root;
-enum SoundBank{
+enum {
 SOUND_BANK_A,
 SOUND_BANK_B,
 };
 String sounds[MAX_NUM_SOUND_BANKS][MAX_NUM_SOUND_FILES];
-SoundBank soundBank = SOUND_BANK_A;
+int soundBank = SOUND_BANK_A;
 int soundFile = 0; // display value
 String soundFilename;
 
 
 // select the input pins for the potentiometers
-int potPin1 = A0;
+int potPin1 = A0; // start
 int potPin2 = A1;
 int potPin3 = A2;
 int potPin4 = A3;
@@ -83,6 +85,9 @@ bool encFlag = 0; // is display decimal flag displayed
 int encPressed = 0; // is encoder button pressed
 char displayValue = 0;
 
+int startPotValue = 0;
+bool btn1Down = false;
+
 void setup() {  
   // open the serial port at 9600 bps:
   Serial.begin(9600); 
@@ -92,7 +97,7 @@ void setup() {
   sdCardSetup();
 
   loadSoundFiles();
-  wavPlayer.play("SDTEST1.WAV");
+  wavPlayer.playWav("SDTEST1.WAV");
   Serial.println("Playing sound file...");
 
   pinSetup();
@@ -113,6 +118,9 @@ void loop() {
   encPressed = !digitalRead(encBtnPin);
   newEncPos = enc.read() / 4;
 
+  startPotValue = analogRead(potPin1);
+  wavPlayer.setPlaybackRate(getPlaybackRate(startPotValue));
+
   if (encPressed) { 
     encFlag = !encFlag;
     soundBank = int(encFlag);
@@ -120,16 +128,21 @@ void loop() {
 
     segmentDisplay.displayHex(displayValue, encFlag);
     soundFilename = sounds[soundBank][soundFile];
-    // wavPlayer.play(soundFilename);
+    // wavPlayer.playWav(soundFilename);
     Serial.println(soundFilename);
   }
 
   updateEncoder(newEncPos);
 
-  if (btn1 == BUTTON_DOWN) {
+  if (btn1 == BUTTON_DOWN && btn1Down == false) {
     // Serial.println("btn 1 DOWN");
-    loadSoundFiles();
+    // loadSoundFiles();
+    Serial.println(wavPlayer.positionMillis());
+    Serial.println(startPotValue);
+    btn1Down = true;
   }
+
+  if (btn1 == BUTTON_UP) btn1Down = false;
 
   // Serial.println(wavPlayer.positionMillis());
   // Serial.println(btn1);
@@ -137,11 +150,15 @@ void loop() {
 
 void audioSetup() {
   Serial.println("Setting up audio...");
-  AudioMemory(8);
+  AudioMemory(24);
   sgtl5000_1.enable();
   sgtl5000_1.volume(1);
   sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
   sgtl5000_1.micGain(36); //NEEDED?
+
+  wavPlayer.enableInterpolation(true);
+  startPotValue = analogRead(potPin1);
+  wavPlayer.setPlaybackRate(getPlaybackRate(startPotValue));
 
   Serial.println("Audio ready");
 }
@@ -239,7 +256,7 @@ void changeSoundFile( String filename ) {
   char buf [length];
   filename.toCharArray(buf, length);
   wavPlayer.stop();
-  wavPlayer.play(buf);
+  wavPlayer.playWav(buf);
 }
 
 void updateEncoder(int pos) {
@@ -275,4 +292,8 @@ void updateEncoder(int pos) {
     newEncPos = pos;
     oldEncPos = pos;
   }
+}
+
+double getPlaybackRate(int16_t analog) {
+  return (analog - 512.0) / 512.0;
 }
