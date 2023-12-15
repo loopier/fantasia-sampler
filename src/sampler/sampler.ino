@@ -154,6 +154,7 @@ void loop() {
 
   if (btn1 == BUTTON_UP) btn1Down = false;
 
+#if DUMP_POTS
   Serial.print("pitch:");
   Serial.print(playratePotValue);
   Serial.print("start:");
@@ -163,6 +164,7 @@ void loop() {
   Serial.print("spread");
   Serial.print(spreadPotValue);
   Serial.println();
+#endif
 }
 
 void audioSetup() {
@@ -259,11 +261,18 @@ void loadSoundFiles() {
       File entry = root.openNextFile();
       if(!entry) { break; }
 
-      sounds[soundBank][soundIndex] = entry.name();
-      Serial.print(entry.name());
-      Serial.print(" : ");
-      Serial.println(sounds[soundBank][soundIndex]);
-      soundIndex++;
+      String s(entry.name());
+      if (s.endsWith(".wav") || s.endsWith(".WAV")) {
+        sounds[soundBank][soundIndex] = entry.name();
+        Serial.print(entry.name());
+        Serial.print(" : ");
+        Serial.println(sounds[soundBank][soundIndex]);
+        soundIndex++;
+      }
+      else {
+        Serial.print(entry.name());
+        Serial.println(" not supported.");
+      }
       entry.close();
     }
     root.close();
@@ -271,7 +280,8 @@ void loadSoundFiles() {
 }
 
 void changeSoundFile( String filename ) {
-  Serial.print("change sound"); Serial.println(filename);
+  Serial.print("change sound: ");
+  Serial.println(filename);
   int length = filename.length() + 1;
   char buf [length];
   filename.toCharArray(buf, length);
@@ -294,21 +304,24 @@ void updateEncoder(int pos) {
     displayValue = hex;
     segmentDisplay.displayHex(displayValue, encFlag);
 
-
     soundFilename = sounds[soundBank][hex];
-    changeSoundFile(soundFilename);
+    if (soundFilename.length() != 0) {
+      Serial.print("Skipping empty sound slot: ");
+      Serial.println(hex);
+      changeSoundFile(soundFilename);
 
-    Serial.print(hex);
-    Serial.print(":");
-    Serial.print(sounds[soundBank][hex].length());
-    Serial.print(" - ");
-    Serial.print(soundBank);
-    Serial.print(":");
-    Serial.print(soundFile);
-    Serial.print(" - ");
-    Serial.print(displayValue);
-    // Serial.print(soundFilename);
-    Serial.println("");
+      Serial.print(hex);
+      Serial.print(":");
+      Serial.print(sounds[soundBank][hex].length());
+      Serial.print(" - ");
+      Serial.print(soundBank);
+      Serial.print(":");
+      Serial.print(soundFile);
+      Serial.print(" - ");
+      Serial.print(displayValue, HEX);
+      // Serial.print(soundFilename);
+      Serial.println("");
+    }
     newEncPos = pos;
     oldEncPos = pos;
   }
