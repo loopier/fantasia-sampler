@@ -1,13 +1,15 @@
 // use: https://github.com/dgduncan/SevenSegment
 #include <SegmentDisplay.h>
+// https://github.com/newdigate/teensy-variable-playback
+#include <TeensyVariablePlayback.h>
 
 #include <Audio.h>
-#include <TeensyVariablePlayback.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
 #include <Encoder.h>
+
 #define MAX_NUM_SOUND_BANKS 2
 #define MAX_NUM_SOUND_FILES 16
 #define BUTTON_UP 0
@@ -50,10 +52,10 @@ String soundFilename;
 
 
 // select the input pins for the potentiometers
-int potPin1 = A0; // start
-int potPin2 = A1;
-int potPin3 = A2;
-int potPin4 = A3;
+int potPin1 = A0; // play rate
+int potPin2 = A1; // start pos
+int potPin3 = A2; // size
+int potPin4 = A3; // spread
 Encoder enc(0,1);
 
 // pushbutton connected to digital pinS
@@ -85,7 +87,11 @@ bool encFlag = 0; // is display decimal flag displayed
 int encPressed = 0; // is encoder button pressed
 char displayValue = 0;
 
+int playratePotValue = 0;
 int startPotValue = 0;
+int sizePotValue = 0;
+int spreadPotValue = 0;
+bool loopWav = true;
 bool btn1Down = false;
 
 void setup() {  
@@ -118,8 +124,12 @@ void loop() {
   encPressed = !digitalRead(encBtnPin);
   newEncPos = enc.read() / 4;
 
-  startPotValue = analogRead(potPin1);
-  wavPlayer.setPlaybackRate(getPlaybackRate(startPotValue));
+  playratePotValue = analogRead(potPin1);
+  startPotValue = analogRead(potPin2);
+  sizePotValue = analogRead(potPin3);
+  spreadPotValue = analogRead(potPin4);
+  wavPlayer.setPlaybackRate(getPlaybackRate(playratePotValue));
+  wavPlayer.setLoopStart(getPlaybackRate(startPotValue));
 
   if (encPressed) { 
     encFlag = !encFlag;
@@ -144,8 +154,15 @@ void loop() {
 
   if (btn1 == BUTTON_UP) btn1Down = false;
 
-  // Serial.println(wavPlayer.positionMillis());
-  // Serial.println(btn1);
+  Serial.print("pitch:");
+  Serial.print(playratePotValue);
+  Serial.print("start:");
+  Serial.print(startPotValue);
+  Serial.print("size:");
+  Serial.print(sizePotValue);
+  Serial.print("spread");
+  Serial.print(spreadPotValue);
+  Serial.println();
 }
 
 void audioSetup() {
@@ -157,8 +174,11 @@ void audioSetup() {
   sgtl5000_1.micGain(36); //NEEDED?
 
   wavPlayer.enableInterpolation(true);
-  startPotValue = analogRead(potPin1);
-  wavPlayer.setPlaybackRate(getPlaybackRate(startPotValue));
+  wavPlayer.setLoopType(loop_type::looptype_repeat);
+  playratePotValue = analogRead(potPin1);
+  startPotValue = analogRead(potPin2);
+  wavPlayer.setPlaybackRate(getPlaybackRate(playratePotValue));
+  wavPlayer.setLoopStart(getStartPosition(startPotValue));
 
   Serial.println("Audio ready");
 }
@@ -295,5 +315,9 @@ void updateEncoder(int pos) {
 }
 
 double getPlaybackRate(int16_t analog) {
+  return (analog - 512.0) / 512.0 * 2;
+}
+
+double getStartPosition(int16_t analog) {
   return (analog - 512.0) / 512.0;
 }
